@@ -1615,6 +1615,7 @@
          sgprm11, sgprm12, sgprm22, &
 	 invstressconviso, &
          gamma, alpha, x, y, dx, dy, da, &
+         kxw, kyw, kaw, &
          invdx, invdy, invda, invsin, &
          invleng, dtemp1, dtemp2, atempprime, &
          puny, pi, pi2, piq, pih
@@ -1720,18 +1721,89 @@
          invdy = c1/dy
          invda = c1/da
 
-         kx = int((x-piq-pi)*invdx) + 1
-         ky = int(y*invdy) + 1
-         ka = int((atempprime-p5)*invda) + 1
+!          kx = int((x-piq-pi)*invdx) + 1
+!          ky = int(y*invdy) + 1
+!          ka = int((atempprime-p5)*invda) + 1
 
 ! Determine sigma_r(A1,Zeta,y) and sigma_s (see Section A1) 
-         stemp11r = s11r(kx,ky,ka)     
-         stemp12r = s12r(kx,ky,ka)
-         stemp22r = s22r(kx,ky,ka)
+!          stemp11r = s11r(kx,ky,ka)     
+!          stemp12r = s12r(kx,ky,ka)
+!          stemp22r = s22r(kx,ky,ka)
+! 
+!          stemp11s = s11s(kx,ky,ka)
+!          stemp12s = s12s(kx,ky,ka)
+!          stemp22s = s22s(kx,ky,ka)
+! 
 
-         stemp11s = s11s(kx,ky,ka)
-         stemp12s = s12s(kx,ky,ka)
-         stemp22s = s22s(kx,ky,ka)
+
+! Interpolated lookup
+
+        ! if (x>=9*pi/4) x=9*pi/4-puny; end
+        ! if (y>=pi/2)   y=pi/2-puny; end
+        ! if (atempprime>=1.0), atempprime=1.0-puny; end
+
+! % need 8 coords and 8 weights
+! % range in kx
+    kx  = int((x-piq-pi)*invdx) + 1
+    kxw = c1 - ((x-piq-pi)*invdx - (kx-1))
+
+    ky  = int(y*invdy) + 1
+    kyw = c1 - (y*invdy - (ky-1))
+
+    ka  = int((atempprime-p5)*invda) + 1
+    kaw = c1 - ((atempprime-p5)*invda - (ka-1))
+
+! % Determine sigma_r(A1,Zeta,y) and sigma_s (see Section A1)
+stemp11r =  kxw* kyw      * kaw      * s11r(kx  ,ky  ,ka  ) &
+    + (c1-kxw) * kyw      * kaw      * s11r(kx+1,ky  ,ka  ) &
+    + kxw      * (c1-kyw) * kaw      * s11r(kx  ,ky+1,ka  ) &
+    + kxw      * kyw      * (c1-kaw) * s11r(kx  ,ky  ,ka+1) &
+    + (c1-kxw) * (c1-kyw) * kaw      * s11r(kx+1,ky+1,ka  ) &
+    + (c1-kxw) * kyw      * (c1-kaw) * s11r(kx+1,ky  ,ka+1) &
+    + kxw      * (c1-kyw) * (c1-kaw) * s11r(kx  ,ky+1,ka+1) &
+    + (c1-kxw) * (c1-kyw) * (c1-kaw) * s11r(kx+1,ky+1,ka+1)
+stemp12r =  kxw* kyw      * kaw      * s12r(kx  ,ky  ,ka  ) &
+    + (c1-kxw) * kyw      * kaw      * s12r(kx+1,ky  ,ka  ) &
+    + kxw      * (c1-kyw) * kaw      * s12r(kx  ,ky+1,ka  ) &
+    + kxw      * kyw      * (c1-kaw) * s12r(kx  ,ky  ,ka+1) &
+    + (c1-kxw) * (c1-kyw) * kaw      * s12r(kx+1,ky+1,ka  ) &
+    + (c1-kxw) * kyw      * (c1-kaw) * s12r(kx+1,ky  ,ka+1) &
+    + kxw      * (c1-kyw) * (c1-kaw) * s12r(kx  ,ky+1,ka+1) &
+    + (c1-kxw) * (c1-kyw) * (c1-kaw) * s12r(kx+1,ky+1,ka+1)
+stemp22r = kxw * kyw      * kaw      * s22r(kx  ,ky  ,ka  ) &
+    + (c1-kxw) * kyw      * kaw      * s22r(kx+1,ky  ,ka  ) &
+    + kxw      * (c1-kyw) * kaw      * s22r(kx  ,ky+1,ka  ) &
+    + kxw      * kyw      * (c1-kaw) * s22r(kx  ,ky  ,ka+1) &
+    + (c1-kxw) * (c1-kyw) * kaw      * s22r(kx+1,ky+1,ka  ) &
+    + (c1-kxw) * kyw      * (c1-kaw) * s22r(kx+1,ky  ,ka+1) &
+    + kxw      * (c1-kyw) * (c1-kaw) * s22r(kx  ,ky+1,ka+1) &
+    + (c1-kxw) * (c1-kyw) * (c1-kaw) * s22r(kx+1,ky+1,ka+1)
+
+stemp11s =  kxw* kyw      * kaw      * s11s(kx  ,ky  ,ka  ) &
+    + (c1-kxw) * kyw      * kaw      * s11s(kx+1,ky  ,ka  ) &
+    + kxw      * (c1-kyw) * kaw      * s11s(kx  ,ky+1,ka  ) &
+    + kxw      * kyw      * (c1-kaw) * s11s(kx  ,ky  ,ka+1) &
+    + (c1-kxw) * (c1-kyw) * kaw      * s11s(kx+1,ky+1,ka  ) &
+    + (c1-kxw) * kyw      * (c1-kaw) * s11s(kx+1,ky  ,ka+1) &
+    + kxw      * (c1-kyw) * (c1-kaw) * s11s(kx  ,ky+1,ka+1) &
+    + (c1-kxw) * (c1-kyw) * (c1-kaw) * s11s(kx+1,ky+1,ka+1)
+stemp12s =  kxw* kyw      * kaw      * s12s(kx  ,ky  ,ka  ) &
+    + (c1-kxw) * kyw      * kaw      * s12s(kx+1,ky  ,ka  ) &
+    + kxw      * (c1-kyw) * kaw      * s12s(kx  ,ky+1,ka  ) &
+    + kxw      * kyw      * (c1-kaw) * s12s(kx  ,ky  ,ka+1) &
+    + (c1-kxw) * (c1-kyw) * kaw      * s12s(kx+1,ky+1,ka  ) &
+    + (c1-kxw) * kyw      * (c1-kaw) * s12s(kx+1,ky  ,ka+1) &
+    + kxw      * (c1-kyw) * (c1-kaw) * s12s(kx  ,ky+1,ka+1) &
+    + (c1-kxw) * (c1-kyw) * (c1-kaw) * s12s(kx+1,ky+1,ka+1)
+stemp22s =  kxw* kyw      * kaw      * s22s(kx  ,ky  ,ka  ) &
+    + (c1-kxw) * kyw      * kaw      * s22s(kx+1,ky  ,ka  ) &
+    + kxw      * (c1-kyw) * kaw      * s22s(kx  ,ky+1,ka  ) &
+    + kxw      * kyw      * (c1-kaw) * s22s(kx  ,ky  ,ka+1) &
+    + (c1-kxw) * (c1-kyw) * kaw      * s22s(kx+1,ky+1,ka  ) &
+    + (c1-kxw) * kyw      * (c1-kaw) * s22s(kx+1,ky  ,ka+1) &
+    + kxw      * (c1-kyw) * (c1-kaw) * s22s(kx  ,ky+1,ka+1) &
+    + (c1-kxw) * (c1-kyw) * (c1-kaw) * s22s(kx+1,ky+1,ka+1)
+
 
 ! Calculate mean ice stress over a collection of floes (Equation 3)
 
